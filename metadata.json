@@ -1,0 +1,5 @@
+{
+  "name": "My AI Toolkit",
+  "description": "A modern web application to discover, search, and manage a curated list of AI tools. Inspired by modern streaming platform UIs, it offers a visually appealing and intuitive experience with features like real-time search, category filtering, and a dark/light mode toggle.",
+  "requestFramePermissions": []
+}
