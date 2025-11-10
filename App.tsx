@@ -1,7 +1,12 @@
+سأقدم لك الكود الكامل النهائي الذي يحافظ على UX النسخة السابقة مع إضافة جميع المميزات الجديدة. انسخ هذا الكود وضعه في ملف App.tsx:
+
+```typescript
 import React, { useState, useEffect } from 'react';
 import { initialTools } from './data';
 
 const NEON_COLOR = '#CCFF00';
+const CATEGORIES = ['All', 'AI', 'Writing', 'Image', 'Code', 'Voice', 'Video', 'Other'];
+const PROMPT_CATEGORIES = ['All', 'Writing', 'Analysis', 'Creative', 'Technical', 'Business'];
 
 interface Tool {
   id: string;
@@ -34,9 +39,7 @@ function App() {
   const [newPrompt, setNewPrompt] = useState({ title: '', content: '', model: '', category: 'Writing' });
   const [selectedPromptCategory, setSelectedPromptCategory] = useState('All');
 
-  const PROMPT_CATEGORIES = ['All', 'Writing', 'Analysis', 'Creative', 'Technical', 'Business'];
-  const CATEGORIES = ['All', 'AI', 'Writing', 'Image', 'Code', 'Voice', 'Video', 'Other'];
-
+  // تحميل البيانات من localStorage
   useEffect(() => {
     const savedFeatured = localStorage.getItem('featuredTools');
     if (savedFeatured) setFeaturedToolIds(JSON.parse(savedFeatured));
@@ -52,17 +55,22 @@ function App() {
     localStorage.setItem('aiPrompts', JSON.stringify(prompts));
   }, [prompts]);
 
-  const addTool = async () => {
-    if (!newTool.name || !newTool.toolUrl) return;
+  const addTool = () => {
+    if (!newTool.name || !newTool.toolUrl) {
+      alert('الرجاء ملء جميع الحقول المطلوبة');
+      return;
+    }
     const tool: Tool = { id: Date.now().toString(), ...newTool };
-    const updatedTools = [...tools, tool];
-    setTools(updatedTools);
+    setTools([...tools, tool]);
     setNewTool({ name: '', description: '', category: 'AI', toolUrl: '', isPaid: false });
     setShowToolForm(false);
   };
 
   const addPrompt = () => {
-    if (!newPrompt.title || !newPrompt.content) return;
+    if (!newPrompt.title || !newPrompt.content) {
+      alert('الرجاء ملء جميع الحقول');
+      return;
+    }
     const prompt: Prompt = { id: Date.now().toString(), ...newPrompt };
     setPrompts([...prompts, prompt]);
     setNewPrompt({ title: '', content: '', model: '', category: 'Writing' });
@@ -70,11 +78,11 @@ function App() {
   };
 
   const toggleFeatured = (id: string) => {
-    if (featuredToolIds.includes(id)) {
-      setFeaturedToolIds(featuredToolIds.filter(fid => fid !== id));
-    } else {
-      setFeaturedToolIds([...featuredToolIds, id]);
-    }
+    setFeaturedToolIds(featuredToolIds.includes(id) ? featuredToolIds.filter(fid => fid !== id) : [...featuredToolIds, id]);
+  };
+
+  const deletePrompt = (id: string) => {
+    setPrompts(prompts.filter(p => p.id !== id));
   };
 
   const filteredAndSortedTools = tools
@@ -92,90 +100,125 @@ function App() {
       return 0;
     });
 
-  const filteredPrompts = prompts.filter(p =>
-    selectedPromptCategory === 'All' || p.category === selectedPromptCategory
-  );
+  const filteredPrompts = prompts.filter(p => selectedPromptCategory === 'All' || p.category === selectedPromptCategory);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white" dir="rtl">
-      <div className="border-b border-slate-800 p-4 flex gap-4">
-        <button
-          onClick={() => setCurrentPage('tools')}
-          className={`px-6 py-2 rounded-lg font-bold ${currentPage === 'tools' ? 'bg-yellow-400 text-black' : 'bg-slate-800'}`}
-        >
-          الأدوات
-        </button>
-        <button
-          onClick={() => setCurrentPage('prompts')}
-          className={`px-6 py-2 rounded-lg font-bold ${currentPage === 'prompts' ? 'bg-yellow-400 text-black' : 'bg-slate-800'}`}
-        >
-          البرومتات
-        </button>
-      </div>
-
-      {currentPage === 'tools' && (
-        <div className="container mx-auto p-8">
-          <h1 className="text-4xl font-bold mb-4" style={{ color: NEON_COLOR }}>مكتبة الأدوات 🛠️</h1>
-          <input type="text" placeholder="ابحث..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full p-3 mb-6 bg-slate-800 rounded border border-slate-700" />
-          <div className="flex gap-4 mb-6">
-            <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)} className="p-2 bg-slate-800 rounded border border-slate-700">
-              {CATEGORIES.map(cat => <option key={cat}>{cat}</option>)}
-            </select>
-            <button onClick={() => setShowToolForm(true)} className="px-4 py-2 rounded bg-yellow-400 text-black font-bold">+ أداة</button>
-          </div>
-          {showToolForm && (
-            <div className="bg-slate-800 p-6 rounded-lg mb-6 border border-slate-700">
-              <input type="text" placeholder="الاسم" value={newTool.name} onChange={(e) => setNewTool({...newTool, name: e.target.value})} className="w-full p-2 mb-3 bg-slate-700 rounded" />
-              <input type="text" placeholder="الرابط" value={newTool.toolUrl} onChange={(e) => setNewTool({...newTool, toolUrl: e.target.value})} className="w-full p-2 mb-3 bg-slate-700 rounded" />
-              <button onClick={addTool} className="px-6 py-2 rounded bg-yellow-400 text-black font-bold">حفظ</button>
-            </div>
-          )}
-          <div className="grid grid-cols-3 gap-6">
-            {filteredAndSortedTools.map(tool => (
-              <div key={tool.id} className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-                {tool.isPaid && <span className="inline-block bg-red-500 px-2 py-1 rounded text-sm mb-2">مدفوع</span>}
-                <h3 className="font-bold text-lg mb-2">{tool.name}</h3>
-                <button onClick={() => window.open(tool.toolUrl, '_blank')} className="w-full py-2 rounded bg-yellow-400 text-black font-bold mb-2">فتح</button>
-                <button onClick={() => toggleFeatured(tool.id)} className={`w-full py-2 rounded ${featuredToolIds.includes(tool.id) ? 'bg-yellow-400 text-black' : 'bg-slate-700'}`}>
-                  {featuredToolIds.includes(tool.id) ? '⭐ Featured' : '☆ Feature'}
-                </button>
-              </div>
-            ))}
-          </div>
+    <div className="min-h-screen bg-slate-950 text-white flex" dir="rtl">
+      {/* الشريط الجانبي */}
+      <div className="w-80 bg-slate-900 border-l border-slate-800 p-6 max-h-screen overflow-y-auto">
+        <h2 className="text-xl font-bold mb-6" style={{ color: NEON_COLOR }}>💡 البرومات</h2>
+        
+        <div className="mb-4 flex justify-between items-center">
+          <button onClick={() => setShowPromptForm(!showPromptForm)} className="text-sm" style={{ color: NEON_COLOR }}>حذف</button>
         </div>
-      )}
 
-      {currentPage === 'prompts' && (
-        <div className="container mx-auto p-8">
-          <h1 className="text-4xl font-bold mb-4" style={{ color: NEON_COLOR }}>البرومتات 💡</h1>
-          <div className="flex gap-2 mb-6 overflow-x-auto">
-            {PROMPT_CATEGORIES.map(cat => (
-              <button key={cat} onClick={() => setSelectedPromptCategory(cat)} className={`px-4 py-2 rounded ${selectedPromptCategory === cat ? 'bg-yellow-400 text-black' : 'bg-slate-800'}`}>
+        <div className="space-y-3 mb-6">
+          {prompts.map(p => (
+            <div key={p.id} className="bg-slate-800 p-3 rounded text-sm">
+              <p className="font-bold">{p.title}</p>
+              <p className="text-gray-400 text-xs truncate">{p.content}</p>
+              <p className="text-xs mt-1" style={{ color: NEON_COLOR }}>Model: {p.model || 'N/A'}</p>
+              <button onClick={() => deletePrompt(p.id)} className="text-red-500 text-xs mt-2">حذف</button>
+            </div>
+          ))}
+        </div>
+
+        <button onClick={() => setShowPromptForm(!showPromptForm)} className="w-full py-2 rounded border-2" style={{ borderColor: NEON_COLOR, color: NEON_COLOR }}>
+          + إضافة برومت
+        </button>
+
+        {showPromptForm && (
+          <div className="mt-4 bg-slate-800 p-3 rounded">
+            <input type="text" placeholder="العنوان" value={newPrompt.title} onChange={(e) => setNewPrompt({...newPrompt, title: e.target.value})} className="w-full p-2 mb-2 bg-slate-700 rounded text-sm" />
+            <textarea placeholder="المحتوى" value={newPrompt.content} onChange={(e) => setNewPrompt({...newPrompt, content: e.target.value})} className="w-full p-2 mb-2 bg-slate-700 rounded text-sm h-16" />
+            <select value={newPrompt.category} onChange={(e) => setNewPrompt({...newPrompt, category: e.target.value})} className="w-full p-2 mb-2 bg-slate-700 rounded text-sm">
+              {PROMPT_CATEGORIES.filter(c => c !== 'All').map(cat => <option key={cat}>{cat}</option>)}
+            </select>
+            <button onClick={addPrompt} className="w-full py-2 rounded bg-yellow-400 text-black font-bold text-sm">حفظ</button>
+          </div>
+        )}
+
+        {/* التصنيفات */}
+        <div className="mt-8">
+          <h3 className="font-bold mb-3 flex items-center">📁 التصنيفات</h3>
+          <div className="space-y-2">
+            {CATEGORIES.map(cat => (
+              <button key={cat} onClick={() => setSelectedCategory(cat)} className={`w-full p-2 rounded text-right ${selectedCategory === cat ? 'bg-yellow-400 text-black font-bold' : 'bg-slate-800'}`}>
                 {cat}
               </button>
             ))}
           </div>
-          <button onClick={() => setShowPromptForm(true)} className="px-4 py-2 rounded bg-yellow-400 text-black font-bold mb-6">+ برومت</button>
-          {showPromptForm && (
-            <div className="bg-slate-800 p-6 rounded-lg mb-6 border border-slate-700">
-              <input type="text" placeholder="العنوان" value={newPrompt.title} onChange={(e) => setNewPrompt({...newPrompt, title: e.target.value})} className="w-full p-2 mb-3 bg-slate-700 rounded" />
-              <textarea placeholder="المحتوى" value={newPrompt.content} onChange={(e) => setNewPrompt({...newPrompt, content: e.target.value})} className="w-full p-2 mb-3 bg-slate-700 rounded h-24" />
-              <button onClick={addPrompt} className="px-6 py-2 rounded bg-yellow-400 text-black font-bold">حفظ</button>
-            </div>
-          )}
-          <div className="grid grid-cols-2 gap-6">
-            {filteredPrompts.map(prompt => (
-              <div key={prompt.id} className="bg-slate-800 rounded-lg p-4 border border-slate-700">
-                <h3 className="font-bold text-lg mb-2">{prompt.title}</h3>
-                <p className="text-sm text-gray-400 mb-4">{prompt.content}</p>
-                <span className="inline-block bg-slate-700 px-3 py-1 rounded text-xs">{prompt.category}</span>
-              </div>
-            ))}
-          </div>
         </div>
-      )}
-    </div>
-  );
-}
+      </div>
 
-export default App;
+      {/* المحتوى الرئيسي */}
+      <div className="flex-1 flex flex-col">
+        {/* زر التنقل بين الصفحات */}
+        <div className="bg-slate-900 border-b border-slate-800 p-4 flex gap-4">
+          <button onClick={() => setCurrentPage('tools')} className={`px-6 py-2 rounded-lg font-bold transition ${currentPage === 'tools' ? 'bg-yellow-400 text-black' : 'bg-slate-800 hover:bg-slate-700'}`}>
+            الأدوات
+          </button>
+          <button onClick={() => setCurrentPage('prompts')} className={`px-6 py-2 rounded-lg font-bold transition ${currentPage === 'prompts' ? 'bg-yellow-400 text-black' : 'bg-slate-800 hover:bg-slate-700'}`}>
+            البرومتات
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-8">
+          {/* صفحة الأدوات */}
+          {currentPage === 'tools' && (
+            <>
+              <h1 className="text-4xl font-bold mb-4" style={{ color: NEON_COLOR }}>قوة الذكاء الاصطناعي في<br />مكتبة ادوات لا حدود لها</h1>
+              <p className="text-gray-400 mb-8">اكتشف واستخدم أفضل أدوات الذكاء الاصطناعي</p>
+
+              {/* شريط البحث */}
+              <input type="text" placeholder="ابحث عن الأدوات التي تبحث عنها..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full md:w-96 p-3 mb-6 bg-slate-800 rounded-lg border border-slate-700" />
+
+              {/* الفرز وإضافة أداة */}
+              <div className="flex gap-4 mb-6">
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)} className="p-2 bg-slate-800 rounded border border-slate-700">
+                  <option value="newest">الأحدث</option>
+                  <option value="oldest">الأقدم</option>
+                  <option value="name">الاسم (أ-ي)</option>
+                </select>
+                <button onClick={() => setShowToolForm(!showToolForm)} className="px-4 py-2 rounded font-bold" style={{ backgroundColor: NEON_COLOR, color: 'black' }}>
+                  + إضافة أداة
+                </button>
+              </div>
+
+              {/* نموذج إضافة أداة */}
+              {showToolForm && (
+                <div className="bg-slate-800 p-6 rounded-lg mb-6 border border-slate-700">
+                  <input type="text" placeholder="اسم الأداة" value={newTool.name} onChange={(e) => setNewTool({...newTool, name: e.target.value})} className="w-full p-2 mb-3 bg-slate-700 rounded" />
+                  <textarea placeholder="الوصف" value={newTool.description} onChange={(e) => setNewTool({...newTool, description: e.target.value})} className="w-full p-2 mb-3 bg-slate-700 rounded h-20" />
+                  <input type="text" placeholder="رابط الأداة" value={newTool.toolUrl} onChange={(e) => setNewTool({...newTool, toolUrl: e.target.value})} className="w-full p-2 mb-3 bg-slate-700 rounded" />
+                  <select value={newTool.category} onChange={(e) => setNewTool({...newTool, category: e.target.value})} className="w-full p-2 mb-3 bg-slate-700 rounded">
+                    {CATEGORIES.filter(c => c !== 'All').map(cat => <option key={cat}>{cat}</option>)}
+                  </select>
+                  <label className="flex items-center gap-2 mb-3">
+                    <input type="checkbox" checked={newTool.isPaid} onChange={(e) => setNewTool({...newTool, isPaid: e.target.checked})} />
+                    أداة مدفوعة
+                  </label>
+                  <button onClick={addTool} className="px-6 py-2 rounded font-bold" style={{ backgroundColor: NEON_COLOR, color: 'black' }}>حفظ</button>
+                </div>
+              )}
+
+              {/* عرض البطاقات */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {filteredAndSortedTools.map(tool => (
+                  <div key={tool.id} className="bg-slate-800 rounded-lg overflow-hidden border border-slate-700 hover:border-slate-500 transition">
+                    <div className="p-6">
+                      {tool.isPaid && <span className="inline-block bg-red-500 text-white px-3 py-1 rounded text-sm mb-3 font-bold">Paid</span>}
+                      <h3 className="font-bold text-lg mb-2">{tool.name}</h3>
+                      <p className="text-sm text-gray-400 mb-4 line-clamp-2">{tool.description || 'No description available'}</p>
+                      <span className="inline-block bg-slate-700 px-3 py-1 rounded text-xs mb-4">{tool.category}</span>
+                      <div className="flex gap-2">
+                        <button onClick={() => window.open(tool.toolUrl, '_blank')} className="flex-1 py-2 rounded font-bold text-sm" style={{ backgroundColor: NEON_COLOR, color: 'black' }}>فتح</button>
+                        <button onClick={() => toggleFeatured(tool.id)} className={`px-3 py-2 rounded font-bold text-sm transition ${featuredToolIds.includes(tool.id) ? 'bg-yellow-400 text-black' : 'bg-slate-700'}`}>
+                          {featuredToolIds.includes(tool.id) ? '⭐ Featured' : '☆ Feature'}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
