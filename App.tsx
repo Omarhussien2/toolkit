@@ -1,5 +1,3 @@
-سأقدم لك الكود الكامل النهائي الذي يحافظ على UX النسخة السابقة مع إضافة جميع المميزات الجديدة. انسخ هذا الكود وضعه في ملف App.tsx:
-
 ```typescript
 import React, { useState, useEffect } from 'react';
 import { initialTools } from './data';
