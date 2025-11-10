@@ -1,6 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { initialTools } from './data';
 
+const GOOGLE_SHEETS_URL = 'https://docs.google.com/spreadsheets/d/1VlfBPQw79zF9Znafn_lvclGAdMmwwCs_S5PaPrMb4Ak/';
+
 function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [allTools, setAllTools] = useState(initialTools || []);
@@ -67,12 +69,20 @@ function App() {
       {/* Header */}
       <div className="border-b border-gray-800 px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="text-2xl">📄</div>
+          <a
+            href={GOOGLE_SHEETS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-lg hover:opacity-80 transition-opacity" title="Open Google Sheet"
+          >
+            📄
+          </a>
+          <div className="flex-1 text-center">
             <h1 className="text-3xl font-bold text-blue-400">AI Toolkit</h1>
+            <p className="text-gray-400 text-sm mt-1">Complete collection of AI tools and resources</p>
           </div>
+          <div className="w-6"></div>
         </div>
-        <p className="text-gray-400 text-sm mt-2">Complete collection of AI tools and resources</p>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 py-8">
@@ -80,32 +90,32 @@ function App() {
         {featuredTools.length > 0 && (
           <div className="mb-12">
             <h2 className="text-2xl font-bold text-white mb-6">⭐ Featured Tools</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {featuredTools.map(tool => (
-                <div key={tool.id} className="bg-gradient-to-br from-blue-900 to-purple-900 border border-blue-700 rounded-lg p-4 hover:shadow-lg hover:shadow-blue-500/20 transition-shadow group">
-                  <div className="flex justify-between items-start mb-3">
-                    <span className="text-2xl">⭐</span>
-                    <button
-                      onClick={() => removeFeatured(tool.id)}
-                      className="bg-red-500 hover:bg-red-600 px-2 py-1 rounded text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      Remove
-                    </button>
+                <div key={tool.id} className="bg-gradient-to-br from-blue-900 to-purple-900 border border-blue-700 rounded-lg p-4 hover:shadow-lg hover:shadow-blue-500/20 transition-shadow flex flex-col">
+                  <div className="flex justify-center mb-3">
+                    <span className="text-3xl">⭐</span>
                   </div>
-                  <h3 className="text-lg font-bold text-white mb-1">{tool.name}</h3>
-                  <p className="text-sm text-gray-200 mb-3 min-h-12">{tool.description || 'No description available'}</p>
-                  <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-bold text-white mb-2 text-center">{tool.name}</h3>
+                  <p className="text-sm text-gray-200 mb-3 flex-grow">{tool.description || 'No description available'}</p>
+                  {tool.category && (
+                    <p className="text-xs text-gray-300 mb-4 text-center">• {tool.category}</p>
+                  )}
+                  <div className="flex gap-2 justify-center">
                     <a
                       href={tool.toolUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="bg-blue-500 hover:bg-blue-600 px-3 py-1 rounded text-sm font-semibold transition-colors"
+                      className="bg-blue-500 hover:bg-blue-600 px-3 py-1 rounded text-xs font-semibold transition-colors"
                     >
                       Open
                     </a>
-                    {tool.category && (
-                      <span className="bg-gray-700 text-gray-200 px-2 py-1 rounded text-xs">{tool.category}</span>
-                    )}
+                    <button
+                      onClick={() => removeFeatured(tool.id)}
+                      className="bg-red-500 hover:bg-red-600 px-3 py-1 rounded text-xs font-semibold transition-colors"
+                    >
+                      Remove
+                    </button>
                   </div>
                 </div>
               ))}
@@ -198,38 +208,34 @@ function App() {
           {filteredTools.length === 0 ? (
             <div className="text-center py-12 text-gray-400">No tools found</div>
           ) : (
-            <div className="space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {paginatedTools.map(tool => (
-                <div key={tool.id} className="bg-gray-900 border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition-colors flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div className="flex-1 min-w-0">
-                    <h3 className="text-lg font-bold text-white">{tool.name}</h3>
-                    <p className="text-sm text-gray-400 mb-2">{tool.description || 'No description available'}</p>
-                    <div className="flex flex-wrap gap-2">
-                      {tool.category && (
-                        <span className="bg-gray-700 text-gray-200 px-2 py-1 rounded text-xs">• {tool.category}</span>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex gap-2 flex-wrap sm:flex-nowrap">
+                <div key={tool.id} className="bg-gray-900 border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition-colors flex flex-col">
+                  <h3 className="text-lg font-bold text-white mb-2 text-center">{tool.name}</h3>
+                  <p className="text-sm text-gray-400 mb-3 flex-grow text-center">{tool.description || 'No description available'}</p>
+                  {tool.category && (
+                    <p className="text-xs text-gray-400 mb-4 text-center">• {tool.category}</p>
+                  )}
+                  <div className="flex gap-2 flex-col">
                     <button
-                      onClick={() => deleteTool(tool.id)}
-                      className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-xs font-semibold transition-colors"
+                      onClick={() => toggleFeatured(tool.id)}
+                      className="bg-yellow-500 hover:bg-yellow-600 px-3 py-1 rounded text-xs font-semibold transition-colors w-full"
                     >
-                      Delete
+                      ⭐ Featured
                     </button>
                     <a
                       href={tool.toolUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="bg-blue-500 hover:bg-blue-600 px-3 py-1 rounded text-xs font-semibold transition-colors text-center"
+                      className="bg-blue-500 hover:bg-blue-600 px-3 py-1 rounded text-xs font-semibold transition-colors text-center w-full"
                     >
                       Open
                     </a>
                     <button
-                      onClick={() => toggleFeatured(tool.id)}
-                      className="bg-yellow-500 hover:bg-yellow-600 px-3 py-1 rounded text-xs font-semibold transition-colors"
+                      onClick={() => deleteTool(tool.id)}
+                      className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-xs font-semibold transition-colors w-full"
                     >
-                      ⭐ Featured
+                      Delete
                     </button>
                   </div>
                 </div>
