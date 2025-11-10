@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { initialTools } from './data';
 
 const GOOGLE_SHEETS_URL = 'https://docs.google.com/spreadsheets/d/1VlfBPQw79zF9Znafn_lvclGAdMmwwCs_S5PaPrMb4Ak/';
@@ -10,15 +10,37 @@ function App() {
   const [newTool, setNewTool] = useState({ name: '', description: '', category: '', toolUrl: '', featured: false })
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [featuredToolIds, setFeaturedToolIds] = useState([]);
+
+  // Load featured tools from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('featuredTools');
+      if (saved) {
+        setFeaturedToolIds(JSON.parse(saved));
+      }
+    } catch (error) {
+      console.error('Error loading featured tools from localStorage:', error);
+    }
+  }, []);
+
+  // Save featured tools to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem('featuredTools', JSON.stringify(featuredToolIds));
+    } catch (error) {
+      console.error('Error saving featured tools to localStorage:', error);
+    }
+  }, [featuredToolIds]);
 
   // Separate featured and regular tools
   const featuredTools = useMemo(() => {
-    return allTools.filter(tool => tool.featured);
-  }, [allTools]);
+    return allTools.filter(tool => featuredToolIds.includes(tool.id));
+  }, [allTools, featuredToolIds]);
 
   // Filtered tools for search (excluding featured in main list)
   const filteredTools = useMemo(() => {
-    let result = allTools.filter(tool => !tool.featured);
+    let result = allTools.filter(tool => !featuredToolIds.includes(tool.id));
 
     if (searchQuery.trim()) {
       result = result.filter(tool =>
@@ -27,263 +49,253 @@ function App() {
         tool.category?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
+
     return result;
-  }, [searchQuery, allTools]);
+  }, [allTools, searchQuery, featuredToolIds]);
 
-  const totalTools = filteredTools.length;
-  const totalPages = Math.ceil(totalTools / itemsPerPage);
-  const paginatedTools = filteredTools.slice(
-    (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
-  );
+  const paginatedTools = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredTools.slice(startIndex, endIndex);
+  }, [filteredTools, currentPage, itemsPerPage]);
 
-  const toggleFeatured = (id) => {
-    setAllTools(allTools.map(tool =>
-      tool.id === id ? { ...tool, featured: !tool.featured } : tool
-    ));
-  };
-
-  const removeFeatured = (id) => {
-    setAllTools(allTools.map(tool =>
-      tool.id === id ? { ...tool, featured: false } : tool
-    ));
-  };
-
-  const deleteTool = (id) => {
-    setAllTools(allTools.filter(tool => tool.id !== id));
-    if (paginatedTools.length === 1 && currentPage > 1) {
-      setCurrentPage(currentPage - 1);
-    }
-  };
+  const totalPages = Math.ceil(filteredTools.length / itemsPerPage);
 
   const handleAddTool = () => {
     if (newTool.name.trim()) {
-      setAllTools([...allTools, { ...newTool, id: Date.now() }]);
+      const tool = {
+        id: Date.now().toString(),
+        name: newTool.name,
+        description: newTool.description,
+        category: newTool.category || 'Other',
+        toolUrl: newTool.toolUrl,
+        featured: false
+      };
+      setAllTools([...allTools, tool]);
       setNewTool({ name: '', description: '', category: '', toolUrl: '', featured: false });
       setShowAddForm(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-950 text-white font-sans">
-      {/* Header */}
-      <div className="border-b border-gray-800 px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <a
-            href={GOOGLE_SHEETS_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-lg hover:opacity-80 transition-opacity" title="Open Google Sheet"
-          >
-            📄
-          </a>
-          <div className="flex-1 text-center">
-            <h1 className="text-3xl font-bold text-blue-400">AI Toolkit</h1>
-            <p className="text-gray-400 text-sm mt-1">Complete collection of AI tools and resources</p>
+  const handleDeleteTool = (toolId) => {
+    setAllTools(allTools.filter(tool => tool.id !== toolId));
+    setFeaturedToolIds(featuredToolIds.filter(id => id !== toolId));
+  };
+
+  const handleToggleFeatured = (toolId) => {
+    if (featuredToolIds.includes(toolId)) {
+      setFeaturedToolIds(featuredToolIds.filter(id => id !== toolId));
+    } else {
+      setFeaturedToolIds([...featuredToolIds, toolId]);
+    }
+  };
+
+  const getCategoryColor = (category) => {
+    const colors = {
+      'AI': 'bg-blue-900 border-l-4 border-blue-400',
+      'Writing': 'bg-purple-900 border-l-4 border-purple-400',
+      'Image': 'bg-pink-900 border-l-4 border-pink-400',
+      'Code': 'bg-green-900 border-l-4 border-green-400',
+      'Voice': 'bg-orange-900 border-l-4 border-orange-400',
+      'Video': 'bg-red-900 border-l-4 border-red-400',
+      'Other': 'bg-gray-800 border-l-4 border-gray-500',
+    };
+    return colors[category] || colors['Other'];
+  };
+
+  const ToolCard = ({ tool, isFeatured = false }) => (
+    <div className={`p-4 rounded-lg ${getCategoryColor(tool.category)}`}>
+      <div className="flex items-start gap-3 mb-3">
+        <span className="text-xl">📄</span>
+        <div className="flex-1 min-w-0">
+          <h3 className="font-bold text-white text-sm break-words">{tool.name}</h3>
+          <p className="text-gray-300 text-xs mt-1 line-clamp-2">{tool.description}</p>
+          <div className="flex items-center gap-2 mt-2">
+            <span className="text-blue-300 text-xs bg-blue-900 px-2 py-1 rounded">{tool.category}</span>
           </div>
-          <div className="w-6"></div>
         </div>
       </div>
+      
+      <div className="flex justify-between items-center gap-2 mt-3">
+        <button
+          onClick={() => handleDeleteTool(tool.id)}
+          className="p-1.5 hover:bg-gray-700 rounded transition text-red-400 hover:text-red-300"
+          title="Delete"
+        >
+          🗑️
+        </button>
+        
+        <button
+          onClick={() => window.open(tool.toolUrl, '_blank')}
+          className="p-2 hover:bg-gray-700 rounded transition text-blue-400 hover:text-blue-300 text-lg"
+          title="Open"
+        >
+          ↗️
+        </button>
+        
+        <button
+          onClick={() => handleToggleFeatured(tool.id)}
+          className={`p-1.5 hover:bg-gray-700 rounded transition ${
+            featuredToolIds.includes(tool.id)
+              ? 'text-yellow-400 hover:text-yellow-300'
+              : 'text-gray-500 hover:text-gray-400'
+          }`}
+          title="Toggle Featured"
+        >
+          ⭐
+        </button>
+      </div>
+    </div>
+  );
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
-        {/* Featured Tools Section */}
-        {featuredTools.length > 0 && (
-          <div className="mb-12">
-            <h2 className="text-2xl font-bold text-white mb-6">⭐ Featured Tools</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {featuredTools.map(tool => (
-                <div key={tool.id} className="bg-gradient-to-br from-blue-900 to-purple-900 border border-blue-700 rounded-lg p-4 hover:shadow-lg hover:shadow-blue-500/20 transition-shadow flex flex-col">
-                  <div className="flex justify-center mb-3">
-                    <span className="text-3xl">⭐</span>
-                  </div>
-                  <h3 className="text-lg font-bold text-white mb-2 text-center">{tool.name}</h3>
-                  <p className="text-sm text-gray-200 mb-3 flex-grow">{tool.description || 'No description available'}</p>
-                  {tool.category && (
-                    <p className="text-xs text-gray-300 mb-4 text-center">• {tool.category}</p>
-                  )}
-                  <div className="flex gap-2 justify-center">
-                    <a
-                      href={tool.toolUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="bg-blue-500 hover:bg-blue-600 px-3 py-1 rounded text-xs font-semibold transition-colors"
-                    >
-                      Open
-                    </a>
-                    <button
-                      onClick={() => removeFeatured(tool.id)}
-                      className="bg-red-500 hover:bg-red-600 px-3 py-1 rounded text-xs font-semibold transition-colors"
-                    >
-                      Remove
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+  return (
+    <div className="min-h-screen bg-gray-950 text-white p-6">
+      <div className="max-w-7xl mx-auto">
+        <h1 className="text-4xl font-bold text-blue-400 mb-2">AI Toolkit</h1>
+        <p className="text-gray-400 mb-6">Explore and manage AI tools</p>
 
-        {/* Search & Add Tool Section */}
-        <div className="mb-8 flex flex-col sm:flex-row gap-4 items-stretch">
-          <button
-            onClick={() => setShowAddForm(!showAddForm)}
-            className="bg-green-500 hover:bg-green-600 px-4 py-2 rounded font-semibold text-sm transition-colors whitespace-nowrap"
-          >
-            + Add Tool
-          </button>
+        {/* Search Bar */}
+        <div className="mb-6">
           <input
             type="text"
+            placeholder="Search tools by name, description, or category..."
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
               setCurrentPage(1);
             }}
-            placeholder="Search for tools..."
-            className="flex-1 bg-gray-900 border border-gray-700 rounded px-4 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors"
+            className="w-full px-4 py-2 bg-gray-900 border border-gray-700 rounded-lg text-white placeholder-gray-500 focus:outline-none focus:border-blue-400"
           />
         </div>
 
-        {/* Add Tool Form */}
-        {showAddForm && (
-          <div className="bg-gray-900 border border-gray-700 rounded-lg p-4 mb-8">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+        {/* Add Tool Button and Form */}
+        <div className="mb-6">
+          {!showAddForm ? (
+            <button
+              onClick={() => setShowAddForm(true)}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition"
+            >
+              + Add Tool
+            </button>
+          ) : (
+            <div className="bg-gray-900 p-4 rounded-lg border border-gray-700">
               <input
                 type="text"
+                placeholder="Tool Name"
                 value={newTool.name}
-                onChange={(e) => setNewTool({...newTool, name: e.target.value})}
-                placeholder="Tool name"
-                className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
+                onChange={(e) => setNewTool({ ...newTool, name: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded mb-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-400"
               />
               <input
                 type="text"
-                value={newTool.category}
-                onChange={(e) => setNewTool({...newTool, category: e.target.value})}
-                placeholder="Category"
-                className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500"
-              />
-              <textarea
-                value={newTool.description}
-                onChange={(e) => setNewTool({...newTool, description: e.target.value})}
                 placeholder="Description"
-                className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 sm:col-span-2"
-                rows="2"
+                value={newTool.description}
+                onChange={(e) => setNewTool({ ...newTool, description: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded mb-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-400"
               />
               <input
-                type="url"
-                value={newTool.toolUrl}
-                onChange={(e) => setNewTool({...newTool, toolUrl: e.target.value})}
-                placeholder="Tool URL"
-                className="bg-gray-800 border border-gray-600 rounded px-3 py-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 sm:col-span-2"
+                type="text"
+                placeholder="Category"
+                value={newTool.category}
+                onChange={(e) => setNewTool({ ...newTool, category: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded mb-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-400"
               />
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  checked={newTool.featured}
-                  onChange={(e) => setNewTool({...newTool, featured: e.target.checked})}
-                  className="w-4 h-4"
-                />
-                Add to Featured Tools
-              </label>
+              <input
+                type="text"
+                placeholder="Tool URL"
+                value={newTool.toolUrl}
+                onChange={(e) => setNewTool({ ...newTool, toolUrl: e.target.value })}
+                className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded mb-2 text-white placeholder-gray-500 focus:outline-none focus:border-blue-400"
+              />
+              <div className="flex gap-2">
+                <button
+                  onClick={handleAddTool}
+                  className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded transition"
+                >
+                  Save Tool
+                </button>
+                <button
+                  onClick={() => setShowAddForm(false)}
+                  className="px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded transition"
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={handleAddTool}
-                className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded text-sm font-semibold transition-colors"
-              >
-                Add
-              </button>
-              <button
-                onClick={() => setShowAddForm(false)}
-                className="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded text-sm font-semibold transition-colors"
-              >
-                Cancel
-              </button>
+          )}
+        </div>
+
+        {/* Featured Tools Section */}
+        {featuredTools.length > 0 && (
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-blue-400 mb-4">Featured Tools</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {featuredTools.map(tool => (
+                <ToolCard key={tool.id} tool={tool} isFeatured={true} />
+              ))}
             </div>
           </div>
         )}
 
         {/* All Tools Section */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-white mb-6">All Tools</h2>
+        <div>
+          <h2 className="text-2xl font-bold text-blue-400 mb-4">All Tools</h2>
+          
           {filteredTools.length === 0 ? (
-            <div className="text-center py-12 text-gray-400">No tools found</div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {paginatedTools.map(tool => (
-                <div key={tool.id} className="bg-gray-900 border border-gray-700 rounded-lg p-4 hover:border-gray-600 transition-colors flex flex-col">
-                  <h3 className="text-lg font-bold text-white mb-2 text-center">{tool.name}</h3>
-                  <p className="text-sm text-gray-400 mb-3 flex-grow text-center">{tool.description || 'No description available'}</p>
-                  {tool.category && (
-                    <p className="text-xs text-gray-400 mb-4 text-center">• {tool.category}</p>
-                  )}
-                  <div className="flex gap-2 flex-col">
-                    <button
-                      onClick={() => toggleFeatured(tool.id)}
-                      className="bg-yellow-500 hover:bg-yellow-600 px-3 py-1 rounded text-xs font-semibold transition-colors w-full"
-                    >
-                      ⭐ Featured
-                    </button>
-                    <a
-                      href={tool.toolUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="bg-blue-500 hover:bg-blue-600 px-3 py-1 rounded text-xs font-semibold transition-colors text-center w-full"
-                    >
-                      Open
-                    </a>
-                    <button
-                      onClick={() => deleteTool(tool.id)}
-                      className="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-xs font-semibold transition-colors w-full"
-                    >
-                      Delete
-                    </button>
-                  </div>
-                </div>
-              ))}
+            <div className="text-center text-gray-400 py-8">
+              No tools found. Try adjusting your search.
             </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-6">
+                {paginatedTools.map(tool => (
+                  <ToolCard key={tool.id} tool={tool} />
+                ))}
+              </div>
+
+              {/* Pagination */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex gap-2">
+                  {[5, 10, 20, 50].map(num => (
+                    <button
+                      key={num}
+                      onClick={() => {
+                        setItemsPerPage(num);
+                        setCurrentPage(1);
+                      }}
+                      className={`px-3 py-1 rounded transition ${
+                        itemsPerPage === num
+                          ? 'bg-blue-600 text-white'
+                          : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                      }`}
+                    >
+                      {num}
+                    </button>
+                  ))}
+                </div>
+                <div className="text-sm text-gray-400">
+                  Page {currentPage} of {totalPages}
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className="px-3 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-300 rounded transition"
+                  >
+                    Previous
+                  </button>
+                  <button
+                    onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                    disabled={currentPage === totalPages}
+                    className="px-3 py-1 bg-gray-800 hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed text-gray-300 rounded transition"
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            </>
           )}
         </div>
-
-        {/* Pagination */}
-        {filteredTools.length > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-4 bg-gray-900 border border-gray-700 rounded-lg p-4">
-            <div className="text-sm text-gray-400">
-              Total: {filteredTools.length} tools
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                disabled={currentPage === 1}
-                className="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 px-3 py-1 rounded text-xs font-semibold transition-colors"
-              >
-                ← Previous
-              </button>
-              <div className="px-3 py-1 text-xs font-semibold">
-                Page {currentPage} of {totalPages}
-              </div>
-              <button
-                onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
-                disabled={currentPage === totalPages}
-                className="bg-gray-700 hover:bg-gray-600 disabled:opacity-50 px-3 py-1 rounded text-xs font-semibold transition-colors"
-              >
-                Next →
-              </button>
-            </div>
-            <select
-              value={itemsPerPage}
-              onChange={(e) => {
-                setItemsPerPage(Number(e.target.value));
-                setCurrentPage(1);
-              }}
-              className="bg-gray-800 border border-gray-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-blue-500"
-            >
-              <option value="5">5</option>
-              <option value="10">10</option>
-              <option value="20">20</option>
-              <option value="50">50</option>
-            </select>
-          </div>
-        )}
       </div>
     </div>
   );
