@@ -103,7 +103,8 @@ function App() {
     return colors[category] || colors['Other'];
   };
 
-  const ToolCard = ({ tool, isFeatured = false }) => (
+  106
+    = ({ tool, isFeatured = false }) => (
     <div className={`p-4 rounded-lg ${getCategoryColor(tool.category)}`}>
       <div className="flex items-start gap-3 mb-3">
         <span className="text-xl">📄</span>
