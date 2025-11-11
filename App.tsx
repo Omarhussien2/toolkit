@@ -1,3 +1,8 @@
+سأقدم لك الآن الكود الكامل الجديد مع رابط API الصحيح من Sheety. سأقوم بنسخ الكود التالي وسيتم تطبيقه في ملف App.tsx:
+
+**الكود الكامل لـ App.tsx مع رابط API الصحيح:**
+
+```typescript
 import React, { useEffect, useState } from 'react';
 import { initialTools } from './data';
 
@@ -8,7 +13,7 @@ const DARK_BG = '#0a0a0a';
 const CARD_BG = '#1a1a1a';
 const TEXT_COLOR = '#e0e0e0';
 const GOLD_COLOR = '#FFD700';
-const SHEETY_API = 'https://api.sheety.co/6912c67fe0fa9a0546f333fe/tools/tools';
+const SHEETY_API = 'https://api.sheety.co/31cb147aac99e6cd99f93c776de1/aiToolkit/tools';
 
 // ======================== الواجهات والأنواع ========================
 interface Tool {
@@ -36,7 +41,7 @@ const fetchToolsFromSheety = async (): Promise<Tool[]> => {
     return data.tools || [];
   } catch (error) {
     console.error('خطأ في جلب البيانات:', error);
-    return [];
+    return initialTools || [];
   }
 };
 
@@ -97,62 +102,66 @@ const ToolCard: React.FC<ToolCardProps> = ({
   onEdit,
 }) => (
   <div
-    className="rounded-lg p-6 border-2 transition-all hover:shadow-xl"
+    className="rounded-xl p-6 border-2 transition-all hover:shadow-2xl card-hover"
     style={{
       backgroundColor: CARD_BG,
       borderColor: isFeatured ? GOLD_COLOR : '#333',
-      boxShadow: isFeatured ? `0 0 20px ${GOLD_COLOR}80` : 'none',
+      boxShadow: isFeatured ? `0 0 25px ${GOLD_COLOR}` : 'none',
     }}
   >
-    {tool.isPaid && (
-      <span
-        className="inline-block px-3 py-1 rounded text-sm font-bold mb-2"
-        style={{ backgroundColor: '#ef4444', color: 'white' }}
+    <div className="flex justify-between items-start mb-3">
+      <div>
+        {tool.isPaid && (
+          <span
+            className="inline-block px-3 py-1 rounded-lg text-xs font-bold mr-2"
+            style={{ backgroundColor: '#ef4444', color: 'white' }}
+          >
+            Paid
+          </span>
+        )}
+      </div>
+      <button
+        onClick={() => onToggleFeatured(tool.id)}
+        className="text-2xl transition hover:scale-125"
+        style={{ color: isFeatured ? GOLD_COLOR : TEXT_COLOR }}
       >
-        مدفوع
-      </span>
-    )}
+        {isFeatured ? '⭐' : '☆'}
+      </button>
+    </div>
+    
     <h3 className="text-xl font-bold mb-2">{tool.name}</h3>
-    <p className="text-gray-400 text-sm mb-3">{tool.description}</p>
-    <div className="flex gap-2 mb-3">
+    <p className="text-gray-400 text-sm mb-4 min-h-12">{tool.description || 'No description'}</p>
+    
+    <div className="flex gap-2 mb-4 flex-wrap">
       <span
-        className="px-3 py-1 rounded text-xs"
+        className="px-3 py-1 rounded-full text-xs font-semibold"
         style={{ backgroundColor: '#222', color: NEON_COLOR }}
       >
         {tool.category}
       </span>
     </div>
+    
     <div className="flex gap-2">
       <button
         onClick={() => window.open(tool.toolUrl, '_blank')}
-        className="flex-1 py-2 rounded font-bold transition hover:opacity-90"
+        className="flex-1 py-2 rounded-lg font-bold transition hover:opacity-90"
         style={{ backgroundColor: NEON_COLOR, color: 'black' }}
       >
         فتح
       </button>
       <button
-        onClick={() => onToggleFeatured(tool.id)}
-        className="px-4 py-2 rounded font-bold transition"
-        style={{
-          backgroundColor: isFeatured ? GOLD_COLOR : '#333',
-          color: isFeatured ? 'black' : TEXT_COLOR,
-        }}
-      >
-        {isFeatured ? '⭐' : '☆'}
-      </button>
-      <button
         onClick={() => onEdit(tool)}
-        className="px-4 py-2 rounded font-bold"
+        className="px-4 py-2 rounded-lg font-bold transition hover:opacity-90"
         style={{ backgroundColor: ACCENT_COLOR, color: 'white' }}
       >
         تعديل
       </button>
       <button
         onClick={() => onDelete(tool.id)}
-        className="px-4 py-2 rounded font-bold"
+        className="px-4 py-2 rounded-lg font-bold transition hover:opacity-90"
         style={{ backgroundColor: '#ef4444', color: 'white' }}
       >
-        حذف
+        🗑️
       </button>
     </div>
   </div>
@@ -175,49 +184,11 @@ function App() {
     toolUrl: '',
     isPaid: false,
   });
-  const [showPromptsModal, setShowPromptsModal] = useState(false);
-  const [showPromptForm, setShowPromptForm] = useState(false);
-  const [newPrompt, setNewPrompt] = useState<Prompt>({
-    id: '',
-    title: '',
-    content: '',
-    category: 'Writing',
-  });
-  const [selectedPromptCategory, setSelectedPromptCategory] = useState('All');
-  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const PROMPT_CATEGORIES = ['All', 'Writing', 'Analysis', 'Creative', 'Technical', 'Business'];
   const CATEGORIES = ['All', 'AI', 'Writing', 'Image', 'Code', 'Voice', 'Video', 'Other'];
 
-  const defaultPrompts: Prompt[] = [
-    {
-      id: 'p1',
-      title: 'تلخيص',
-      content: 'يرجى تلخيص هذا النص بشكل موجز...',
-      category: 'Analysis',
-    },
-    {
-      id: 'p2',
-      title: 'كتابة إبداعية',
-      content: 'اكتب قصة إبداعية عن...',
-      category: 'Creative',
-    },
-    {
-      id: 'p3',
-      title: 'مراجعة الكود',
-      content: 'راجع هذا الكود واقترح تحسينات...',
-      category: 'Technical',
-    },
-    {
-      id: 'p4',
-      title: 'تحسين SEO',
-      content: 'ساعدني في تحسين هذا المحتوى لتحسين محركات البحث...',
-      category: 'Business',
-    },
-  ];
-
-  // ========== تحميل البيانات ==========
+  // تحميل البيانات
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
@@ -234,35 +205,27 @@ function App() {
     loadData();
   }, []);
 
-  // ========== حفظ المفضلة ==========
+  // حفظ المفضلة
   useEffect(() => {
     localStorage.setItem('featured', JSON.stringify(Array.from(featuredIds)));
   }, [featuredIds]);
 
-  useEffect(() => {
-    localStorage.setItem('prompts', JSON.stringify(prompts));
-  }, [prompts]);
-
-  // ========== دوال المعالجة ==========
+  // المعالجات
   const handleAddTool = async () => {
     if (!formData.name || !formData.toolUrl) {
       alert('الرجاء ملء الحقول المطلوبة');
       return;
     }
-
     let url = formData.toolUrl;
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       url = 'https://' + url;
     }
-
     const toolToSave = { ...formData, toolUrl: url };
-
     if (editingId) {
       await updateToolInSheety(editingId, toolToSave);
     } else {
       await addToolToSheety(toolToSave);
     }
-
     const updatedTools = await fetchToolsFromSheety();
     setTools(updatedTools);
     resetForm();
@@ -295,26 +258,6 @@ function App() {
     setFeaturedIds(newFeatured);
   };
 
-  const handleAddPrompt = () => {
-    if (!newPrompt.title || !newPrompt.content) {
-      alert('الرجاء ملء جميع الحقول');
-      return;
-    }
-    setPrompts([...prompts, { ...newPrompt, id: Date.now().toString() }]);
-    setNewPrompt({ id: '', title: '', content: '', category: 'Writing' });
-    setShowPromptForm(false);
-  };
-
-  const handleCopyPrompt = (id: string, content: string) => {
-    navigator.clipboard.writeText(content);
-    setCopiedId(id);
-    setTimeout(() => setCopiedId(null), 2000);
-  };
-
-  const handleDeletePrompt = (id: string) => {
-    setPrompts(prompts.filter(p => p.id !== id));
-  };
-
   const resetForm = () => {
     setFormData({ name: '', description: '', category: 'AI', toolUrl: '', isPaid: false });
     setEditingId(null);
@@ -343,29 +286,87 @@ function App() {
       return 0;
     });
 
-  const allPrompts = [...defaultPrompts, ...prompts];
-  const filteredPrompts = allPrompts.filter(
-    p => selectedPromptCategory === 'All' || p.category === selectedPromptCategory
-  );
-
   return (
     <div className="min-h-screen text-white" dir="rtl" style={{ backgroundColor: DARK_BG }}>
       <style>{`
         * { font-family: 'Tajawal', sans-serif; }
         body { margin: 0; padding: 0; }
-        .featured-glow { box-shadow: 0 0 20px ${GOLD_COLOR}, inset 0 0 10px rgba(255, 215, 0, 0.2); }
         .card-hover { transition: all 0.3s ease; }
         .card-hover:hover { transform: translateY(-8px); }
         input, textarea, select { direction: rtl; }
       `}</style>
 
-      <div className="flex" style={{ minHeight: '100vh' }}>
-        {/* الشريط الجانبي */}
-        <div className="w-80 border-r" style={{ borderColor: '#333', backgroundColor: CARD_BG, maxHeight: '100vh', overflowY: 'auto' }}>
-          <div className="p-6">
-            <h2 className="text-xl font-bold mb-6" style={{ color: NEON_COLOR }}>💡 البرومات</h2>
+      <div className="max-w-7xl mx-auto px-4 py-8">
+        {/* الهيدر */}
+        <div className="mb-12">
+          <h1 className="text-5xl font-bold mb-2" style={{ color: NEON_COLOR }}>
+            My AI Toolkit 🚀
+          </h1>
+          <p className="text-gray-400">كتالوج شخصي وتفاعلي لأدوات الذكاء الاصطناعي</p>
+        </div>
 
-            <div className="space-y-3 mb-6">
-              {prompts.map(p => (
-                <div key={p.id} className="rounded-lg p-3" style={{ backgroundColor: '#222' }}>
-                  <p className="
+        {/* شريط البحث والفلترة */}
+        <div className="mb-8 space-y-4">
+          <input
+            type="text"
+            placeholder="ابحث عن الأدوات التي تبحث عنها..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full p-4 rounded-lg border-2"
+            style={{ backgroundColor: CARD_BG, borderColor: '#333', color: TEXT_COLOR }}
+          />
+
+          <div className="flex gap-4 flex-wrap">
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="px-4 py-2 rounded-lg border-2"
+              style={{ backgroundColor: CARD_BG, borderColor: '#333', color: TEXT_COLOR }}
+            >
+              {getCategories().map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-4 py-2 rounded-lg border-2"
+              style={{ backgroundColor: CARD_BG, borderColor: '#333', color: TEXT_COLOR }}
+            >
+              <option value="newest">الأحدث</option>
+              <option value="oldest">الأقدم</option>
+              <option value="name">الاسم (أ-ي)</option>
+            </select>
+
+            <button
+              onClick={() => setShowForm(!showForm)}
+              className="px-6 py-2 rounded-lg font-bold transition hover:opacity-90"
+              style={{ backgroundColor: NEON_COLOR, color: 'black' }}
+            >
+              + إضافة أداة
+            </button>
+          </div>
+        </div>
+
+        {/* نموذج الإضافة */}
+        {showForm && (
+          <div className="rounded-lg p-6 mb-8 border-2" style={{ backgroundColor: CARD_BG, borderColor: ACCENT_COLOR }}>
+            <input
+              type="text"
+              placeholder="اسم الأداة"
+              value={formData.name}
+              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              className="w-full p-3 mb-3 rounded-lg"
+              style={{ backgroundColor: '#222', color: TEXT_COLOR }}
+            />
+            <textarea
+              placeholder="الوصف"
+              value={formData.description}
+              onChange={(e) => setFormData({...formData, description: e.target.value})}
+              className="w-full p-3 mb-3 rounded-lg h-20"
+              style={{ backgroundColor: '#222', color: TEXT_COLOR }}
+            />
+            <input
+              type="text"
+              placeholder="رابط الأدا
